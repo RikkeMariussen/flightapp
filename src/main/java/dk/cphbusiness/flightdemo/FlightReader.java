@@ -10,6 +10,8 @@ import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static java.util.Locale.filter;
 
@@ -29,8 +31,17 @@ public class FlightReader
             List<FlightInfoDTO> flightInfoDTOList = getFlightInfoDetails(flightList);
             //flightInfoDTOList.forEach(System.out::println);
 
+            System.out.println("\t"+"\t"+"\t"+"\t"+"------------------");
             System.out.println("The total flight time for airline is: "+ totalFlightTimeForAirline("Lufthansa")+" minutes");
+
+            System.out.println("\t"+"\t"+"\t"+"\t"+"------------------");
             System.out.println("The average flight time for airline is: "+ averageFlightTimeForAirline("Lufthansa")+" minutes");
+
+            System.out.println("\t"+"\t"+"\t"+"\t"+"------------------");
+            getTotalFlightTimePerAirline(flightInfoDTOList);
+
+            System.out.println("\t"+"\t"+"\t"+"\t"+"------------------");
+            getFlightsBetweenSpecificAirports("Fukuoka", "Haneda");
 
 
         } catch (IOException e)
@@ -101,8 +112,39 @@ public class FlightReader
                 .filter(flight -> flight.getAirline().equals(airline))
                 .mapToDouble(flight -> flight.getDuration().toMinutes())
                 .average()
-                .getAsDouble();
+                .getAsDouble(); //Runtime error hvis det er null ellers skal man bruge optionel og evt. isPresent() eller og orElse()
 
         return averageDuration;
     }
+
+    public static void getTotalFlightTimePerAirline(List<FlightInfoDTO> flightInfoDTOList)
+    {
+        //Copied from teachers program
+        flightInfoDTOList.stream()
+                .filter(flight -> flight.getAirline() != null)
+                .collect(Collectors.groupingBy(FlightInfoDTO::getAirline, Collectors.summingLong(flight -> flight.getDuration().toMinutes())))
+                .forEach((airline, total)-> System.out.println(airline + " has a total flight time of " + total + " minutes" +System.lineSeparator()));
+    }
+
+    public static List<FlightInfoDTO> getFlightsBetweenSpecificAirports(String airport1, String airport2) throws IOException
+    {
+        List<FlightDTO> flightList = FlightReader.getFlightsFromFile("flights json");
+        List<FlightInfoDTO> flightInfoDTOList = FlightReader.getFlightInfoDetails(flightList);
+
+        List<FlightInfoDTO> result = flightInfoDTOList.stream()
+                .filter(flight -> flight.getOrigin() != null && flight.getDestination() != null)
+                .filter(flight -> (flight.getOrigin().contains(airport1) && flight.getDestination().contains(airport2)) || (flight.getOrigin().contains(airport2) && flight.getDestination().contains(airport1)))
+                .collect(Collectors.toList());
+
+        result.forEach(flight -> {
+            System.out.println("Origin: " + flight.getOrigin());
+            System.out.println("Destination: " + flight.getDestination());
+            System.out.println("Flight Number: " + flight.getIata());
+            System.out.println("Departure Time: " + flight.getDeparture());
+            System.out.println("-------------------------------");
+        });
+
+        return result;
+    }
+
 }
